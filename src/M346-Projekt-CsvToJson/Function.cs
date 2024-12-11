@@ -33,25 +33,35 @@ namespace M346_Projekt_CsvToJson
                 return;
             }
 
+            // Abrufen des Source-Buckets aus den Umgebungsvariablen
+            var sourceBucket = Environment.GetEnvironmentVariable("SOURCE_BUCKET");
             var bucketName = s3Event.S3.Bucket.Name;
             var objectKey = s3Event.S3.Object.Key;
 
+            // Überprüfen, ob das Ereignis aus dem richtigen Source-Bucket kommt
+            if (bucketName != sourceBucket)
+            {
+                context.Logger.LogLine($"Event is not from the expected source bucket: {sourceBucket}");
+                return;
+            }
+
             try
             {
-                // Retrieve the CSV file from S3
+                // Abrufen der CSV-Datei aus dem Source-Bucket
                 var response = await _s3Client.GetObjectAsync(bucketName, objectKey);
 
                 using (var reader = new StreamReader(response.ResponseStream))
                 {
                     var csvContent = await reader.ReadToEndAsync();
 
-                    // Convert CSV to JSON using custom method
+                    // CSV in JSON umwandeln mit der benutzerdefinierten Methode
                     var jsonContent = ConvertCsvToJson(csvContent);
 
-                    // Upload JSON to destination bucket
+                    // Abrufen des Ziel-Buckets aus den Umgebungsvariablen
                     var destinationBucket = Environment.GetEnvironmentVariable("DESTINATION_BUCKET");
                     var destinationKey = Path.ChangeExtension(objectKey, ".json");
 
+                    // Hochladen der JSON-Datei in den Ziel-Bucket
                     using (var jsonStream = new MemoryStream(Encoding.UTF8.GetBytes(jsonContent)))
                     {
                         var putRequest = new PutObjectRequest
