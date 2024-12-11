@@ -1,0 +1,16 @@
+# .NET build results
+bin/
+obj/
+
+# User-specific files
+.idea/
+.vscode/
+
+# AWS Lambda deployment files
+.aws-sam/
+.serverless/
+
+# .NET Core global tool files
+.dotnet/
+# Log files
+*.log
