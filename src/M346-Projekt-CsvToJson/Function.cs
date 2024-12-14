@@ -33,22 +33,27 @@ namespace M346_Projekt_CsvToJson
                 return;
             }
 
+            var sourceBucket = Environment.GetEnvironmentVariable("SOURCE_BUCKET");
             var bucketName = s3Event.S3.Bucket.Name;
             var objectKey = s3Event.S3.Object.Key;
 
+            if (bucketName != sourceBucket)
+            {
+                context.Logger.LogLine($"Event is not from the expected source bucket: {sourceBucket}");
+                return;
+            }
+
             try
             {
-                // Retrieve the CSV file from S3
+
                 var response = await _s3Client.GetObjectAsync(bucketName, objectKey);
 
                 using (var reader = new StreamReader(response.ResponseStream))
                 {
                     var csvContent = await reader.ReadToEndAsync();
 
-                    // Convert CSV to JSON using custom method
                     var jsonContent = ConvertCsvToJson(csvContent);
 
-                    // Upload JSON to destination bucket
                     var destinationBucket = Environment.GetEnvironmentVariable("DESTINATION_BUCKET");
                     var destinationKey = Path.ChangeExtension(objectKey, ".json");
 
@@ -75,7 +80,6 @@ namespace M346_Projekt_CsvToJson
             }
         }
 
-        // Custom method to convert CSV to JSON
         private string ConvertCsvToJson(string csvContent)
         {
             var lines = csvContent.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
@@ -103,7 +107,7 @@ namespace M346_Projekt_CsvToJson
             }
 
             if (json[json.Length - 1] == ',')
-                json.Length--; // Remove the last comma
+                json.Length--; 
 
             json.Append("]");
 
