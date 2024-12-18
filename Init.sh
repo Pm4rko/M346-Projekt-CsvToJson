@@ -71,19 +71,6 @@ aws s3api put-bucket-notification-configuration \
     ]
   }"
 
-
-echo "Füge S3 Trigger für den Output-Bucket hinzu..."
-aws s3api put-bucket-notification-configuration \
-  --bucket "$OUT_BUCKET_NAME" \
-  --notification-configuration "{
-    \"LambdaFunctionConfigurations\": [
-      {
-        \"LambdaFunctionArn\": \"$LAMBDA_ARN\",
-        \"Events\": [\"s3:ObjectCreated:*\"] 
-      }
-    ]
-  }"
-
 echo "Trigger hinzugefügt."
 
 echo "Setup abgeschlossen!"
