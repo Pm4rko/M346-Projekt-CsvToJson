@@ -14,8 +14,8 @@ namespace M346_Projekt_CsvToJson
     public class Function
     {
         private readonly IAmazonS3 _s3Client;
-        private const string InputBucket = "m346-csv-to-json-in"; 
-        private const string OutputBucket = "m346-csv-to-json-out";
+        private const string InputBucket = "m346-csv-to-json-input"; 
+        private const string OutputBucket = "m346-csv-to-json-output";
         public Function() : this(new AmazonS3Client()) { }
 
         public Function(IAmazonS3 s3Client)
@@ -25,6 +25,8 @@ namespace M346_Projekt_CsvToJson
 
         public async System.Threading.Tasks.Task FunctionHandler(S3Event evnt, ILambdaContext context)
         {
+            context.Logger.LogLine("Lambda function started.");
+
             var s3Event = evnt.Records.FirstOrDefault();
             if (s3Event == null)
             {
@@ -34,6 +36,8 @@ namespace M346_Projekt_CsvToJson
 
             var bucketName = s3Event.S3.Bucket.Name;
             var objectKey = s3Event.S3.Object.Key;
+            
+            context.Logger.LogLine($"Received event for bucket: {bucketName}, object key: {objectKey}");
 
             if (bucketName != InputBucket)
             {
@@ -43,14 +47,18 @@ namespace M346_Projekt_CsvToJson
 
             try
             {
+                context.Logger.LogLine("Starting S3 GetObjectAsync to fetch file from S3 bucket.");
                 var response = await _s3Client.GetObjectAsync(bucketName, objectKey);
+                context.Logger.LogLine($"Successfully fetched object {objectKey} from bucket {bucketName}.");
 
                 using (var reader = new StreamReader(response.ResponseStream))
                 {
                     var csvContent = await reader.ReadToEndAsync();
+                    context.Logger.LogLine($"Successfully read CSV content from {objectKey}.");
 
                     // CSV zu JSON konvertieren
                     var jsonContent = ConvertCsvToJson(csvContent);
+                    context.Logger.LogLine($"CSV content converted to JSON.");
 
                     var destinationKey = Path.ChangeExtension(objectKey, ".json");
 
@@ -64,10 +72,10 @@ namespace M346_Projekt_CsvToJson
                             ContentType = "application/json"
                         };
 
+                        context.Logger.LogLine($"Starting S3 PutObjectAsync to upload JSON to bucket {OutputBucket}.");
                         await _s3Client.PutObjectAsync(putRequest);
+                        context.Logger.LogLine($"Successfully uploaded JSON to {OutputBucket}/{destinationKey}");
                     }
-
-                    context.Logger.LogLine($"Successfully converted {objectKey} to JSON and uploaded to {OutputBucket}/{destinationKey}");
                 }
             }
             catch (Exception e)
@@ -75,7 +83,10 @@ namespace M346_Projekt_CsvToJson
                 context.Logger.LogLine($"Error processing {objectKey} from bucket {bucketName}. Exception: {e.Message}");
                 throw;
             }
+
+            context.Logger.LogLine("Lambda function processing completed.");
         }
+
 
         private string ConvertCsvToJson(string csvContent)
         {
