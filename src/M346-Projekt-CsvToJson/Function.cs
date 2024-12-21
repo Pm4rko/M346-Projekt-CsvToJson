@@ -14,8 +14,8 @@ namespace M346_Projekt_CsvToJson
     public class Function
     {
         private readonly IAmazonS3 _s3Client;
-        private const string InputBucket = "m346-csv-to-json-input"; 
-        private const string OutputBucket = "m346-csv-to-json-output";
+        private readonly string OutputBucket = Environment.GetEnvironmentVariable("OUT_BUCKET_NAME");
+
         public Function() : this(new AmazonS3Client()) { }
 
         public Function(IAmazonS3 s3Client)
@@ -38,12 +38,7 @@ namespace M346_Projekt_CsvToJson
             var objectKey = s3Event.S3.Object.Key;
             
             context.Logger.LogLine($"Received event for bucket: {bucketName}, object key: {objectKey}");
-
-            if (bucketName != InputBucket)
-            {
-                context.Logger.LogLine($"Event received from unexpected bucket: {bucketName}");
-                return;
-            }
+            context.Logger.LogLine($"Output Bucket Environment Variable: {OutputBucket}");
 
             try
             {
@@ -56,7 +51,6 @@ namespace M346_Projekt_CsvToJson
                     var csvContent = await reader.ReadToEndAsync();
                     context.Logger.LogLine($"Successfully read CSV content from {objectKey}.");
 
-                    // CSV zu JSON konvertieren
                     var jsonContent = ConvertCsvToJson(csvContent);
                     context.Logger.LogLine($"CSV content converted to JSON.");
 
@@ -86,7 +80,6 @@ namespace M346_Projekt_CsvToJson
 
             context.Logger.LogLine("Lambda function processing completed.");
         }
-
 
         private string ConvertCsvToJson(string csvContent)
         {
@@ -118,7 +111,6 @@ namespace M346_Projekt_CsvToJson
                 }
 
                 json.Append("},");
-
             }
 
             if (json[json.Length - 1] == ',')
